@@ -47,17 +47,17 @@ public class SpaceNebulae {
         double[][][] pixels = new double[Width][Height][3];
 
         int seed = (int) (100*Math.random()); // => z-Offset
-        double NoiseF = 1; //Stretch & Squeeze
-        double DistNF = 4; // -------''------
+        double NoiseF = 6; //Stretch & Squeeze
+        double DistNF = 20; // -------''------
         double DistortionScaleF = 3000;
-        double NoiseScaleF = 1000;
-        double NoiseOffset = 4;
+
         for(int y = 0; y < Height; y += 1){
             for(int x = 0; x < Width; x += 1){
             	for(int z = 0; z < pixels[0][0].length; z++) {
-                    double xoff = ImprovedNoise.noise(DistNF * x / Width, DistNF * y / Height, z + seed);
+                    double xoff = ImprovedNoise.noise(DistNF * x / Width, DistNF * y / Height, 2*seed+5);
                     double yoff = ImprovedNoise.noise(DistNF * x / Width, DistNF* y / Height, z + seed);
-                    pixels[x][y][z] = NoiseOffset + NoiseScaleF * ImprovedNoise.noise((NoiseF*x + xoff*DistortionScaleF) / Width, (NoiseF * y+yoff*DistortionScaleF) / Height, z + seed);
+                    pixels[x][y][z] = ImprovedNoise.noise((NoiseF*x + xoff*DistortionScaleF) / Width, (NoiseF * y+yoff*DistortionScaleF) / Height, z + seed);
+
                 }
             }
         }
@@ -81,7 +81,6 @@ public class SpaceNebulae {
         BufferedImage pic = new BufferedImage(Width, Height, BufferedImage.TYPE_3BYTE_BGR);
         for(int y = 0; y < Height; y += 1){
             for(int x = 0; x < Width; x += 1){
-
             	Color pix = new Color(intpx[x][y][0], intpx[x][y][0], intpx[x][y][0]);
                 int rgb = pix.getRGB();
                 pic.setRGB(x, y, rgb);
