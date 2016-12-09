@@ -38,6 +38,61 @@ public class SpaceNebulae {
         return maxs;
     }
 
+    public static double[][][] mask(double[][][] px){
+        double[][] ma = new double[px.length][px[0].length];
+        double d = Math.sqrt(3)/2; //Perlin noise output range = +-d
+        for (int x = 0; x < ma.length; x += 1) {
+            for (int y = 0; y < ma[0].length; y += 1) {
+                ma[x][y] = (px[x][y][2]+(d))/(d)-0.45;
+            }
+        }
+
+        for(int i = 0; i < 10; i += 1) {
+            ma = updatemask(ma);
+        }
+
+        for(int i = 0; i < 40; i += 1) {
+            for (int x = 1; x < ma.length - 1; x += 1) {
+                for (int y = 1; y < ma[0].length - 1; y += 1) {
+                    ma[x][y] = (ma[x - 1][y - 1] + ma[x - 1][y] + ma[x - 1][y + 1]
+                            + ma[x][y - 1] + ma[x][y] + ma[x][y + 1]
+                            + ma[x + 1][y - 1] + ma[x + 1][y] + ma[x + 1][y + 1])/9;
+                }
+            }
+        }
+
+        for (int x = 0; x < ma.length; x += 1){
+            for (int y = 0; y < ma[0].length; y += 1){
+                for(int z = 0; z < px[0][0].length; z += 1){
+                    px[x][y][z] = (1-ma[x][y])*(px[x][y][z]+2*d);
+                }
+            }
+        }
+
+        return px;
+    }
+
+
+    public static double[][] updatemask(double[][] ma){
+        double[][] ms = new double[ma.length][ma[0].length];
+        for(int x = 0; x < ma.length; x += 1){
+            for (int y = 0; y < ma[0].length; y += 1){
+                try{
+                    double s = ma[x-1][y-1] + ma[x-1][y] + ma[x-1][y+1]
+                          + ma[x][y-1] + ma[x][y] + ma[x][y+1]
+                          + ma[x+1][y-1] + ma[x+1][y] + ma[x+1][y+1];
+                    if(s > 5){
+                        ms[x][y] = 1;
+                    }else{
+                        ms[x][y] = 0;
+                    }
+                }catch(ArrayIndexOutOfBoundsException e){
+                    ms[x][y] = 0;;
+                }
+            }
+        }
+        return ms;
+    }
 
     public static void main(String[] args){
         final int Width = 1920, Height = 1081;
@@ -47,8 +102,8 @@ public class SpaceNebulae {
         double[][][] pixels = new double[Width][Height][3];
 
         int seed = (int) (100*Math.random()); // => z-Offset
-        double NoiseF = 6; //Stretch & Squeeze
-        double DistNF = 20; // -------''------
+        double NoiseF = 5; //Stretch & Squeeze
+        double DistNF = 10; // -------''------
         double DistortionScaleF = 3000;
 
         for(int y = 0; y < Height; y += 1){
@@ -62,21 +117,22 @@ public class SpaceNebulae {
             }
         }
 
+        pixels = mask(pixels);
+
 //DoublePX -> IntPx
         double[] min = getmin(pixels);
         double[] max = getmax(pixels);
+
+        //System.out.println("m: " + min[0] + ", M: " + max[0]);
 
         int[][][] intpx = new int[pixels.length][pixels[0].length][pixels[0][0].length];
         for(int y = 0; y < pixels[0].length; y += 1) {
             for (int x = 0; x < pixels.length; x += 1) {
                 for (int z = 0; z < pixels[0][0].length; z += 1) {
-                    intpx[x][y][z] = (int) (255 * (pixels[x][y][z] - min[z]) / (max[z] - min[z]));
+                    intpx[x][y][z] = (int)(255 * (pixels[x][y][z] - min[z]) / (max[z] - min[z]));
                 }
             }
         }
-
-
-
 
         BufferedImage pic = new BufferedImage(Width, Height, BufferedImage.TYPE_3BYTE_BGR);
         for(int y = 0; y < Height; y += 1){
@@ -97,9 +153,9 @@ public class SpaceNebulae {
 
 
 //OUTPUT
-        File out = new File("pic.jpg");
+        File out = new File("pic.png");
         try {
-            ImageIO.write(pic, "jpg", out);
+            ImageIO.write(pic, "png", out);
         }catch(IOException e){
             e.printStackTrace();
         }
