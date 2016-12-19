@@ -120,15 +120,17 @@ public class SpaceNebulae {
 
 	public static double[][][] selectcenter(double[][][] px, double[] min){
 		int xC, yC;
-		xC = (int) (px.length*Math.random()/4.0);
-		yC = (int) (px[0].length*Math.random()/4.0);
+		
+		xC = (int) ((px.length/2)*(Math.random()+0.5));
+		yC = (int) ((px[0].length/4.0)*(Math.random()+0.5));
 		
 		for (int x = 0; x < px.length; x += 1){
 			for (int y = 0; y < px[0].length; y += 1){
 				for(int z = 0; z < px[0][0].length; z += 1){
-					double dist = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
-					double darkeningFactor = 1-Math.exp(0.0001*dist);
-					px[x][y][z] = (px[x][y][z]+min[z])*darkeningFactor;
+					double dist = 0.5*(Math.abs(xC-x) + Math.abs(yC-y));
+					double D = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
+					px[x][y][z] = (px[x][y][z]+min[z])*Math.pow(Math.exp(-0.0025*(dist+D)+0.5*px[x][y][z]),1);
+					
 				}
 			}
 		}
@@ -137,6 +139,45 @@ public class SpaceNebulae {
 		return px;
 	}
 
+	public static int[][][] addStars(int[][][] px){
+		int N = 10 + (int) (Math.random()*120);
+		int BigS = 40;
+		double decF = Math.log(2)/BigS;
+		System.out.println("dF"+ decF);
+		for(int i = 0; i < N; i += 1){
+			int sx = (int) (Math.random()*px.length);
+			int sy = (int) (Math.random()*px[0].length);
+			if((i)%10 == 0 && px[sx][sy][0] < 10){
+				//Grosser Stern
+				try{
+					for(int x = -BigS; x < BigS; x += 1){
+						for(int y = -BigS; y < BigS; y += 1){
+							double dist = 0.5*(Math.abs(x) + Math.abs(y));
+							for(int z = 0; z < px[0][0].length; z += 1){
+								px[sx-x][sy-y][z] = (int) Math.max(px[sx-x][sy-y][z], (255.0*Math.exp(-0.09*dist)));		
+							}
+						}
+					}
+				}catch(ArrayIndexOutOfBoundsException e){}
+			}else{
+				//Kleiner Stern
+				try{
+					for(int z = 0; z < px[0][0].length; z += 1){
+						px[sx][sy][z] = 255;
+						px[sx+1][sy][z] = 255;
+						px[sx-1][sy][z] = 255;
+						px[sx][sy+1][z] = 255;
+						px[sx][sy-1][z] = 255;
+					}
+				}catch(ArrayIndexOutOfBoundsException e){
+					//who cares lol
+				}
+			}
+		}
+	
+	return px;
+}
+	
 	public static void main(String[] args){
 		final int Width = 1920, Height = 1080;
 		//final double scaleF = 2.0;
@@ -176,16 +217,21 @@ public class SpaceNebulae {
 		for(int y = 0; y < pixels[0].length; y += 1) {
 			for (int x = 0; x < pixels.length; x += 1) {
 				for (int z = 0; z < pixels[0][0].length; z += 1) {
-					intpx[x][y][z] = (int)(255 * (pixels[x][y][z] - min[z]) / (max[z] - min[z]));
-					//intpx[x][y][z] = (int)(255.0*Math.pow(((double)intpx[x][y][z]/255.0), 2));
+					intpx[x][y][z] = (int)(255 * (pixels[x][y][z] - min[z]) / (max[z] - min[z]));	
 				}
 			}
 		}
 
+		intpx = addStars(intpx);
+		
 		BufferedImage pic = new BufferedImage(Width, Height, BufferedImage.TYPE_3BYTE_BGR);
 		for(int y = 0; y < Height; y += 1){
 			for(int x = 0; x < Width; x += 1){
-				Color pix = new Color(intpx[x][y][0], intpx[x][y][1], intpx[x][y][2]);
+				int r = intpx[x][y][0];
+				int g = intpx[x][y][1];
+				int b = intpx[x][y][2];
+				
+				Color pix = new Color(r, g, b);
 				int rgb = pix.getRGB();
 				pic.setRGB(x, y, rgb);
 			}
