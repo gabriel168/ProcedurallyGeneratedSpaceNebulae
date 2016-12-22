@@ -39,11 +39,15 @@ public class SpaceNebulae {
 	}
 
 	public static double[][][] mask(double[][][] px){
-		double[][] ma = new double[px.length][px[0].length];
+		double[][][] ma = new double[px.length][px[0].length][px[0][0].length];
 		double d = Math.sqrt(3)/2; //Perlin noise output-Bereich ist +-d
 		for (int x = 0; x < ma.length; x += 1) {
 			for (int y = 0; y < ma[0].length; y += 1) {
-				ma[x][y] = (px[x][y][2]+(d))/(d)-0.45;
+				for(int z = 0; z < ma[0][0].length; z += 1){
+					
+				
+				ma[x][y][z] = (px[x][y][z]+(d))/(d)-0.45;
+				}
 			}
 		}
 
@@ -58,7 +62,7 @@ public class SpaceNebulae {
 		for (int x = 0; x < ma.length; x += 1){
 			for (int y = 0; y < ma[0].length; y += 1){
 				for(int z = 0; z < px[0][0].length; z += 1){
-					px[x][y][z] = (1-ma[x][y])*(px[x][y][z]+2*d); 
+					px[x][y][z] = (1-ma[x][y][0])*(px[x][y][z]+2*d); 
 				}
 			}
 		}
@@ -66,71 +70,74 @@ public class SpaceNebulae {
 		return px;
 	}
 
-	public static double[][] updatemask(double[][] ma){
-		double[][] ms = new double[ma.length][ma[0].length];
+	public static double[][][] updatemask(double[][][] ma){
+		double[][][] ms = new double[ma.length][ma[0].length][ma[0][0].length];
 		for(int x = 0; x < ma.length; x += 1){
 			for (int y = 0; y < ma[0].length; y += 1){
-				try{
-					double s = ma[x-1][y-1] + ma[x-1][y] + ma[x-1][y+1]
-							+ ma[x][y-1] + ma[x][y] + ma[x][y+1]
-									+ ma[x+1][y-1] + ma[x+1][y] + ma[x+1][y+1];
-					if(s > 5){
-						ms[x][y] = 1;
-					}else{
-						ms[x][y] = 0;
+				for(int z = 0; z < ma[0][0].length; z += 1){
+					try{
+						double s = ma[x-1][y-1][z] + ma[x-1][y][z] + ma[x-1][y+1][z]
+								+ ma[x][y-1][z] + ma[x][y][z] + ma[x][y+1][z]
+										+ ma[x+1][y-1][z] + ma[x+1][y][z] + ma[x+1][y+1][z];
+						if(s > 5){
+							ms[x][y][z] = 1;
+						}else{
+							ms[x][y][z] = 0;
+						}
+					}catch(ArrayIndexOutOfBoundsException e){
+						ms[x][y][z] = 0;;
 					}
-				}catch(ArrayIndexOutOfBoundsException e){
-					ms[x][y] = 0;;
 				}
 			}
 		}
 		return ms;
 	}
 
-	public static double[][] blurmask(double[][] ma){
+	public static double[][][] blurmask(double[][][] ma){
 		double TOTAL;
 		int fl = 10;
-
+		for(int z = 0; z < ma[0][0].length; z += 1){
 		for(int x = 0; x < ma.length; x += 1){
 			TOTAL = 0;
 			for(int b = 0; b < fl; b += 1){
-				TOTAL += ma[x][b];
+				TOTAL += ma[x][b][z];
 			}
 			for(int y = fl; y < ma[0].length-fl; y += 1){
-				TOTAL += ma[x][y+fl];
-				TOTAL -= ma[x][y-fl];
-				ma[x][y] = TOTAL/(2*fl+1);
+				TOTAL += ma[x][y+fl][z];
+				TOTAL -= ma[x][y-fl][z];
+				ma[x][y][z] = TOTAL/(2*fl+1);
 			}
 		}
 
 		for(int y = 0; y < ma[0].length; y += 1){
 			TOTAL = 0;
 			for(int b = 0; b < fl; b += 1){
-				TOTAL += ma[b][y];
+				TOTAL += ma[b][y][z];
 			}
 			for(int x = fl; x < ma.length-fl; x += 1){
-				TOTAL += ma[x+fl][y];
-				TOTAL -= ma[x-fl][y];
-				ma[x][y] = TOTAL/(2*fl+1);
+				TOTAL += ma[x+fl][y][z];
+				TOTAL -= ma[x-fl][y][z];
+				ma[x][y][z] = TOTAL/(2*fl+1);
 			}
 		}
-
+		}
 		return ma;
 	}
 
 	public static double[][][] selectcenter(double[][][] px, double[] min){
 		int xC, yC;
 
-		xC = (int) ((px.length/2)*(Math.random()+0.5));
-		yC = (int) ((px[0].length/4.0)*(Math.random()+0.5));
+		xC = (int) ((px.length)*(Math.random()*0.5+0.25));
+		yC = (int) ((px[0].length)*(Math.random()*0.5+0.25));
 
 		for (int x = 0; x < px.length; x += 1){
 			for (int y = 0; y < px[0].length; y += 1){
 				for(int z = 0; z < px[0][0].length; z += 1){
-					double dist = 0.5*(Math.abs(xC-x) + Math.abs(yC-y));
-					double D = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
-					px[x][y][z] = (px[x][y][z]+min[z])*Math.pow(Math.exp(-0.0025*(dist+D)+0.5*px[x][y][z]),1);
-
+					double avgdydx = 0.5*(Math.abs(xC-x) + Math.abs(yC-y));
+					double dist = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
+					px[x][y][z] = (px[x][y][z]+min[z])*Math.pow(Math.exp(-0.0025*(avgdydx+dist)+0.5*px[x][y][z]),1);
+					px[x][y][z] *= (1+0.5*Math.sin(0.1*dist+10*px[x][y][z]));
+					//http://lodev.org/cgtutor/randomnoise.html
 				}
 			}
 		}
@@ -139,15 +146,78 @@ public class SpaceNebulae {
 		return px;
 	}
 
+	static private double Gamma = 0.01;
+	static private double IntensityMax = 255;
+
+	/** Taken from Earl F. Glynn's web page:
+	 * <a href="http://www.efg2.com/Lab/ScienceAndEngineering/Spectra.htm">Spectra Lab Report</a>
+	 * */
+	public static int[] waveLengthToRGB(double Wavelength){
+		double factor;
+		double Red,Green,Blue;
+
+		if((Wavelength >= 380) && (Wavelength<440)){
+			Red = -(Wavelength - 440) / (440 - 380);
+			Green = 0.0;
+			Blue = 1.0;
+		}else if((Wavelength >= 440) && (Wavelength<490)){
+			Red = 0.0;
+			Green = (Wavelength - 440) / (490 - 440);
+			Blue = 1.0;
+		}else if((Wavelength >= 490) && (Wavelength<510)){
+			Red = 0.0;
+			Green = 1.0;
+			Blue = -(Wavelength - 510) / (510 - 490);
+		}else if((Wavelength >= 510) && (Wavelength<580)){
+			Red = (Wavelength - 510) / (580 - 510);
+			Green = 1.0;
+			Blue = 0.0;
+		}else if((Wavelength >= 580) && (Wavelength<645)){
+			Red = 1.0;
+			Green = -(Wavelength - 645) / (645 - 580);
+			Blue = 0.0;
+		}else if((Wavelength >= 645) && (Wavelength<781)){
+			Red = 1.0;
+			Green = 0.0;
+			Blue = 0.0;
+		}else{
+			Red = 0.0;
+			Green = 0.0;
+			Blue = 0.0;
+		};
+
+		// Let the intensity fall off near the vision limits
+
+		if((Wavelength >= 380) && (Wavelength<420)){
+			factor = 0.3 + 0.7*(Wavelength - 380) / (420 - 380);
+		}else if((Wavelength >= 420) && (Wavelength<701)){
+			factor = 1.0;
+		}else if((Wavelength >= 701) && (Wavelength<781)){
+			factor = 0.3 + 0.7*(780 - Wavelength) / (780 - 700);
+		}else{
+			factor = 0.0;
+		};
+
+
+		int[] rgb = new int[3];
+
+		// Don't want 0^x = 1 for x <> 0
+		rgb[0] = Red==0.0 ? 0 : (int) Math.round(IntensityMax * Math.pow(Red * factor, Gamma));
+		rgb[1] = Green==0.0 ? 0 : (int) Math.round(IntensityMax * Math.pow(Green * factor, Gamma));
+		rgb[2] = Blue==0.0 ? 0 : (int) Math.round(IntensityMax * Math.pow(Blue * factor, Gamma));
+
+		return rgb;
+	}
+
 	public static int[][][] addStars(int[][][] px){
 		int a = 50, i = 200; //Helligkeit kleiner Sterne, aussen bzw innen
-		int N = 10 + (int) (Math.random()*120); //Anzahl Sterne
+		int N = 50 + (int) (Math.random()*120); //Anzahl Sterne
 
 
 		for(int n = 0; n < N; n += 1){
 			int sx = (int) (Math.random()*px.length);
 			int sy = (int) (Math.random()*px[0].length);
-			if((n)%10 == 0 && px[sx][sy][0] < 10){
+			if((n)%10 == 0 && px[sx][sy][0]+px[sx][sy][1]+px[sx][sy][2] < 30){
 				//Grosser Stern
 				try{
 					int BigS = (int) (Math.random()*30.0+10.0); //Grösse 
@@ -186,6 +256,18 @@ public class SpaceNebulae {
 		return px;
 	}
 
+	public static int[][][] monochromize(int[][][] px){
+		int[] col = waveLengthToRGB(380+Math.random()*400);
+		for(int x = 0; x < px.length; x += 1){
+			for(int y = 0; y < px[0].length; y += 1){
+				for(int z = 0; z < 3; z += 1){
+					px[x][y][z] = (int) (col[z]*px[x][y][z]/255.0);
+				}			
+			}
+		}
+		return px;
+	}
+
 	public static void main(String[] args){
 		final int Width = 1920, Height = 1080;
 
@@ -198,7 +280,7 @@ public class SpaceNebulae {
 
 		for(int y = 0; y < Height; y += 1){
 			for(int x = 0; x < Width; x += 1){
-				for(int z = 0; z < pixels[0][0].length; z++) {
+				for(int z = 0; z < pixels[0][0].length; z++) {	
 					double xoff = ImprovedNoise.noise(DistNF * x / Width, DistNF * y / Height, 2*seed+5);
 					double yoff = ImprovedNoise.noise(DistNF * x / Width, DistNF* y / Height, seed+2*z);
 					pixels[x][y][z] = ImprovedNoise.noise((NoiseF*x + xoff*DistortionScaleF) / Width, (NoiseF * y+yoff*DistortionScaleF) / Height, z + seed);
@@ -226,14 +308,17 @@ public class SpaceNebulae {
 			}
 		}
 
+		intpx = monochromize(intpx);
 		intpx = addStars(intpx);
 
+		//int[] col = waveLengthToRGB(380+Math.random()*400);
 		BufferedImage pic = new BufferedImage(Width, Height, BufferedImage.TYPE_3BYTE_BGR);
 		for(int y = 0; y < Height; y += 1){
 			for(int x = 0; x < Width; x += 1){
-				int r = intpx[x][y][0];
-				int g = intpx[x][y][1];
-				int b = intpx[x][y][2];
+
+				int r = intpx[x][y][0];//col[0]*intpx[x][y][0]/255;
+				int g = intpx[x][y][1];//col[1]*intpx[x][y][0]/255;
+				int b = intpx[x][y][2];//col[2]*intpx[x][y][0]/255;
 
 				Color pix = new Color(r, g, b);
 				int rgb = pix.getRGB();
@@ -249,6 +334,7 @@ public class SpaceNebulae {
 		}catch(IOException e){
 			e.printStackTrace();
 		}
+		
 		System.out.println("Done");
 	}
 }
