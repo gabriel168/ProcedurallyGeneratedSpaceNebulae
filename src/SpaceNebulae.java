@@ -38,15 +38,13 @@ public class SpaceNebulae {
 		return maxs;
 	}
 
-	public static double[][][] mask(double[][][] px){
+	public static double[][][] mask(double[][][] px, double[] min, double[] max){
 		double[][][] ma = new double[px.length][px[0].length][px[0][0].length];
-		double d = Math.sqrt(3)/2; //Perlin noise output-Bereich ist +-d
+
 		for (int x = 0; x < ma.length; x += 1) {
 			for (int y = 0; y < ma[0].length; y += 1) {
 				for(int z = 0; z < ma[0][0].length; z += 1){
-					
-				
-				ma[x][y][z] = (px[x][y][z]+(d))/(d)-0.45;
+					ma[x][y][z] = Math.round((px[x][y][z]-min[z])/(max[z]-min[z]));
 				}
 			}
 		}
@@ -55,14 +53,15 @@ public class SpaceNebulae {
 			ma = updatemask(ma);
 		}
 
-		for(int i = 0; i < 10; i += 1) {
+		for(int i = 0; i < 1; i += 1) {
 			ma = blurmask(ma);
 		}
 
 		for (int x = 0; x < ma.length; x += 1){
 			for (int y = 0; y < ma[0].length; y += 1){
 				for(int z = 0; z < px[0][0].length; z += 1){
-					px[x][y][z] = (1-ma[x][y][0])*(px[x][y][z]+2*d); 
+					//System.out.println(ma[x][y][z]);
+					px[x][y][z] = (ma[x][y][(z+1)%3])*(px[x][y][z]);
 				}
 			}
 		}
@@ -95,7 +94,7 @@ public class SpaceNebulae {
 
 	public static double[][][] blurmask(double[][][] ma){
 		double TOTAL;
-		int fl = 10;
+		int fl = 5;
 		for(int z = 0; z < ma[0][0].length; z += 1){
 		for(int x = 0; x < ma.length; x += 1){
 			TOTAL = 0;
@@ -135,8 +134,8 @@ public class SpaceNebulae {
 				for(int z = 0; z < px[0][0].length; z += 1){
 					double avgdydx = 0.5*(Math.abs(xC-x) + Math.abs(yC-y));
 					double dist = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
-					px[x][y][z] = (px[x][y][z]+min[z])*Math.pow(Math.exp(-0.0025*(avgdydx+dist)+0.5*px[x][y][z]),1);
-					px[x][y][z] *= (1+0.5*Math.sin(0.1*dist+10*px[x][y][z]));
+					px[x][y][z] = (px[x][y][z]-min[z])*Math.pow(Math.exp(-0.0025*(avgdydx+dist)+0.05*px[x][y][z]),1);
+					//px[x][y][z] *= Math.pow(Math.sin(0.01*dist+px[x][y][(z+1)%3]+px[x][y][z]-px[x][y][(z+2)%3]),10);
 					//http://lodev.org/cgtutor/randomnoise.html
 				}
 			}
@@ -242,10 +241,10 @@ public class SpaceNebulae {
 						px[sx-1][sy][z] = i;
 						px[sx][sy+1][z] = i;
 						px[sx][sy-1][z] = i;
-						px[sx+1][sy+1][z] = a;
+						/*px[sx+1][sy+1][z] = a;
 						px[sx+1][sy-1][z] = a;
 						px[sx-1][sy+1][z] = a;
-						px[sx-1][sy-1][z] = a;
+						px[sx-1][sy-1][z] = a;*/
 					}
 				}catch(ArrayIndexOutOfBoundsException e){
 					//just give up lol
@@ -274,35 +273,40 @@ public class SpaceNebulae {
 		double[][][] pixels = new double[Width][Height][3];
 
 		int seed = (int) (100*Math.random()); // => z-Offset
-		double NoiseF = 10; //Stretch & Squeeze
-		double DistNF = 10; // -------''------
-		double DistortionScaleF = 3000;
+		double NoiseF = 50; //Stretch & Squeeze
+		double DistNF = 50; // -------''------
+		double DistortionScaleF = 1000;
 
 		for(int y = 0; y < Height; y += 1){
 			for(int x = 0; x < Width; x += 1){
 				for(int z = 0; z < pixels[0][0].length; z++) {	
 					double xoff = ImprovedNoise.noise(DistNF * x / Width, DistNF * y / Height, 2*seed+5);
 					double yoff = ImprovedNoise.noise(DistNF * x / Width, DistNF* y / Height, seed+2*z);
-					pixels[x][y][z] = ImprovedNoise.noise((NoiseF*x + xoff*DistortionScaleF) / Width, (NoiseF * y+yoff*DistortionScaleF) / Height, z + seed);
+					double xK = (NoiseF*x + xoff*DistortionScaleF) / Width;
+					double yK = (NoiseF * y+yoff*DistortionScaleF) / Height;
+					double zK =  z + seed;
+					pixels[x][y][z] = ImprovedNoise.noise(xK, yK, zK)+ 2*ImprovedNoise.noise(xK/2, yK/2, zK/2)+ 4*ImprovedNoise.noise(xK/4, yK/4, zK/4)+8*ImprovedNoise.noise(xK/8, yK/8, zK/8);
+					//pixels[x][y][z] *= 1+0.5*Math.cos(yoff*xoff*5);
 				}
 			}
 		}
 
-
-		pixels = mask(pixels);
 		double[] min = getmin(pixels);
+		double[] max = getmax(pixels);
+		pixels = mask(pixels, min, max);
+		min = getmin(pixels);
 		pixels = selectcenter(pixels, min);
 
 		//DoublePX -> IntPx
 		min = getmin(pixels);
-		double[] max = getmax(pixels);
+		max = getmax(pixels);
 
 		System.out.println("m: " + min[0] + ", M: " + max[0]);
 
 		int[][][] intpx = new int[pixels.length][pixels[0].length][pixels[0][0].length];
 		for(int y = 0; y < pixels[0].length; y += 1) {
-			for (int x = 0; x < pixels.length; x += 1) {
-				for (int z = 0; z < pixels[0][0].length; z += 1) {
+			for(int x = 0; x < pixels.length; x += 1) {
+				for(int z = 0; z < pixels[0][0].length; z += 1) {
 					intpx[x][y][z] = (int)(255 * (pixels[x][y][z] - min[z]) / (max[z] - min[z]));	
 				}
 			}
