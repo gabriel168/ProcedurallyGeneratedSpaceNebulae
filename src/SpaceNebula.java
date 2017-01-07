@@ -38,7 +38,7 @@ public class SpaceNebula {
     }
 
 
-    public SpaceNebula(int width, int height) {
+    public SpaceNebula(int width, int height){
         this.pixel = new double[width][height][3];
         this.min = new double[3];
         this.max = new double[3];
@@ -60,7 +60,7 @@ public class SpaceNebula {
                     double zK = z + seed;
                     for (int o = 1; o < 16; o *= 2) {
                         this.pixel[x][y][z] += o * ImprovedNoise.noise(xK / o, yK / o, zK / o);
-                        this.pixel[x][y][z] *= 1 + 0.5 * Math.cos(yoff * xoff * 5);
+                        this.pixel[x][y][z] *= 1 + 0.75*Math.cos((yoff + xoff));
                     }
                 }
             }
@@ -79,15 +79,16 @@ public class SpaceNebula {
             mask = updatemask(mask);
         }
 
-        for (int i = 0; i < 1; i += 1) {
+        for (int i = 0; i < 2; i += 1) {
             mask = blurmask(mask);
         }
 
+        this.checkMin();
         for (int x = 0; x < mask.length; x += 1) {
             for (int y = 0; y < mask[0].length; y += 1) {
+                //if(!(0 <= mask[x][y] && mask[x][y] <= 1)){ System.out.println(mask[x][y]);}
                 for (int z = 0; z < this.pixel[0][0].length; z += 1) {
-                    //System.out.println(ma[x][y][z]);
-                    this.pixel[x][y][z] = (mask[x][y]) * (this.pixel[x][y][z]);
+                    this.pixel[x][y][z] = (mask[x][y]) * (this.pixel[x][y][z]-this.min[z]);
                 }
             }
         }
@@ -120,7 +121,7 @@ public class SpaceNebula {
 
     private static double[][] blurmask(double[][] mask){
         double TOTAL;
-        int fl = 5;
+        int fl = 7;
             for(int x = 0; x < mask.length; x += 1){
                 TOTAL = 0;
                 for(int b = 0; b < fl; b += 1){
@@ -150,15 +151,15 @@ public class SpaceNebula {
 
 
     public void dimAround(int xC, int yC){
-        //xC = (int) ((this.pixel.length)*(Math.random()*0.5+0.25));
-        //yC = (int) ((this.pixel[0].length)*(Math.random()*0.5+0.25));
+        this.checkMin();
+        this.checkMax();
         for (int x = 0; x < this.pixel.length; x += 1){
             for (int y = 0; y < this.pixel[0].length; y += 1){
                 for(int z = 0; z < this.pixel[0][0].length; z += 1){
                     double avgdydx = 0.5*(Math.abs(xC-x) + Math.abs(yC-y));
                     double dist = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
-                    this.pixel[x][y][z] = (this.pixel[x][y][z]-min[z])*Math.exp(-0.0025*(avgdydx+dist)+0.05*this.pixel[x][y][z]);
-                    //this.pixel[x][y][z] *= Math.pow(Math.sin(0.01*dist+this.pixel[x][y][(z+1)%3]+this.pixel[x][y][z]-px[x][y][(z+2)%3]),10);
+                    this.pixel[x][y][z] = (this.pixel[x][y][z]-this.min[z])*Math.exp(-0.0025*(avgdydx+dist)-0.01*Math.abs(this.pixel[x][y][z]));
+                    //this.pixel[x][y][z] *= Math.pow(Math.sin(0.001*dist+this.pixel[x][y][(z+1)%3]+this.pixel[x][y][z]+this.pixel[x][y][(z+2)%3]),10);
                     //http://lodev.org/cgtutor/randomnoise.html
                 }
             }
@@ -168,17 +169,7 @@ public class SpaceNebula {
     public void dimAround(){
         int xC = (int) ((this.pixel.length)*(Math.random()*0.5+0.25));
         int yC = (int) ((this.pixel[0].length)*(Math.random()*0.5+0.25));
-        for (int x = 0; x < this.pixel.length; x += 1){
-            for (int y = 0; y < this.pixel[0].length; y += 1){
-                for(int z = 0; z < this.pixel[0][0].length; z += 1){
-                    double avgdydx = 0.5*(Math.abs(xC-x) + Math.abs(yC-y));
-                    double dist = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
-                    this.pixel[x][y][z] = (this.pixel[x][y][z]-min[z])*Math.exp(-0.0025*(avgdydx+dist)+0.05*this.pixel[x][y][z]);
-                    //this.pixel[x][y][z] *= Math.pow(Math.sin(0.01*dist+this.pixel[x][y][(z+1)%3]+this.pixel[x][y][z]-this.pixel[x][y][(z+2)%3]),10);
-                    //http://lodev.org/cgtutor/randomnoise.html
-                }
-            }
-        }
+        this.dimAround(xC, yC);
     }
 
     /** Taken from Earl F. Glynn's web page:
@@ -268,6 +259,10 @@ public class SpaceNebula {
         }
     }
 
+    public void SternStunde(){
+        this.SternStunde(50+(int)(Math.random()*100));
+    }
+
     public void SternStunde(int Anzahl) {
         int a = 50, i = 200; //Helligkeit kleiner Sterne, aussen bzw innen
         for (int n = 0; n < Anzahl; n += 1) {
@@ -312,18 +307,18 @@ public class SpaceNebula {
 
     public void writeToFile(String fileName){
         BufferedImage pic = new BufferedImage(intpx.length, intpx[0].length, BufferedImage.TYPE_3BYTE_BGR);
-
         for(int x = 0; x < intpx.length; x += 1){
             for(int y = 0; y < intpx[0].length; y += 1){
-                int r = intpx[x][y][0];//col[0]*intpx[x][y][0]/255;
-                int g = intpx[x][y][1];//col[1]*intpx[x][y][0]/255;
-                int b = intpx[x][y][2];//col[2]*intpx[x][y][0]/255;
+                int r = intpx[x][y][0];
+                int g = intpx[x][y][1];
+                int b = intpx[x][y][2];
 
                 Color pix = new Color(r, g, b);
                 int rgb = pix.getRGB();
                 pic.setRGB(x, y, rgb);
             }
         }
+
         //OUTPUT
         File out = new File(fileName);
         try {
