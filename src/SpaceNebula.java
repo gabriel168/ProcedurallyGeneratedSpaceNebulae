@@ -58,8 +58,8 @@ public class SpaceNebula {
                     double xK = (NoiseF * x + xoff * DistortionScaleF) / this.pixel[0].length;
                     double yK = (NoiseF * y + yoff * DistortionScaleF) / this.pixel[0].length;
                     double zK = z + seed;
-                    for (int o = 1; o < 16; o *= 2) {
-                        this.pixel[x][y][z] += o * ImprovedNoise.noise(xK / o, yK / o, zK / o);
+                    for (int o = 1, lcw = 1; o < 16; o *= 2, lcw++){
+                        this.pixel[x][y][z] += (o-0.1*lcw) * ImprovedNoise.noise(xK / o, yK / o, zK / o);// + o*ImprovedNoise.noise(xK / o, yK / o, zK / o);
                         this.pixel[x][y][z] *= 1 + 0.75*Math.cos((yoff + xoff));
                     }
                 }
@@ -69,17 +69,20 @@ public class SpaceNebula {
 
     public void schwaden() {
         double[][] mask = new double[this.pixel.length][this.pixel[0].length];
+        checkMin();
+        checkMax();
         for (int x = 0; x < mask.length; x += 1){
             for (int y = 0; y < mask[0].length; y += 1) {
-                mask[x][y] = Math.round((this.pixel[x][y][0] - min[0]) / (max[0] - min[0]));
+                mask[x][y] = Math.round((this.pixel[x][y][0] - min[0]) / (max[0] - min[0])+0.1);
             }
         }
 
-        for (int i = 0; i < 10; i += 1) {
+
+        for (int i = 0; i < 15; i += 1) {
             mask = updatemask(mask);
         }
 
-        for (int i = 0; i < 2; i += 1) {
+        for (int i = 0; i < 3; i += 1) {
             mask = blurmask(mask);
         }
 
@@ -117,11 +120,9 @@ public class SpaceNebula {
         return newmask;
     }
 
-
-
     private static double[][] blurmask(double[][] mask){
         double TOTAL;
-        int fl = 7;
+        int fl = 8;
             for(int x = 0; x < mask.length; x += 1){
                 TOTAL = 0;
                 for(int b = 0; b < fl; b += 1){
@@ -149,7 +150,6 @@ public class SpaceNebula {
         }
 
 
-
     public void dimAround(int xC, int yC){
         this.checkMin();
         this.checkMax();
@@ -158,7 +158,11 @@ public class SpaceNebula {
                 for(int z = 0; z < this.pixel[0][0].length; z += 1){
                     double avgdydx = 0.5*(Math.abs(xC-x) + Math.abs(yC-y));
                     double dist = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
-                    this.pixel[x][y][z] = (this.pixel[x][y][z]-this.min[z])*Math.exp(-0.0025*(avgdydx+dist)-0.01*Math.abs(this.pixel[x][y][z]));
+                    this.pixel[x][y][z] = Math.pow(
+                            (this.pixel[x][y][z]-this.min[z])*Math.exp(0.001*(-1*(avgdydx+dist)+4*this.pixel[x][y][z]))
+                    , 1.5);
+                    //color = pow(color * intensity, falloff);
+
                     //this.pixel[x][y][z] *= Math.pow(Math.sin(0.001*dist+this.pixel[x][y][(z+1)%3]+this.pixel[x][y][z]+this.pixel[x][y][(z+2)%3]),10);
                     //http://lodev.org/cgtutor/randomnoise.html
                 }
