@@ -43,7 +43,7 @@ public class SpaceNebula {
 
     /**
      * Initialisiert ein Bild mit der angegebenen Aufl&ouml;sung.
-     * Dabei werden zu jedem Pixel ein RGB-Wert als double[3] gespeichert
+     * Dabei wird zu jedem Pixel ein RGB-Wert als double[3] gespeichert
      */
     public SpaceNebula(int width, int height){
         this.pixel = new double[width][height][3];
@@ -94,7 +94,6 @@ public class SpaceNebula {
 
     /**
      * &Uuml;berlagert das Bild mit einem schwadenartigen, schwarzem Muster basierend auf einem der Farbkanäle.
-     *
      */
     public void schwaden() {
         double[][] mask = new double[this.pixel.length][this.pixel[0].length];
@@ -127,7 +126,7 @@ public class SpaceNebula {
 
     /**Pixel die zusammen mit der Summe aller Nachbarn einen Wert > 4 haben werden zu 1,
      * pixel am Rand werden zu 0.
-     * Wird in schwaden() verwendet
+     * Wird in schwaden() verwendet.
      */
     private static double[][] updatemask(double[][] mask){
         double[][] newmask = new double[mask.length][mask[0].length];
@@ -155,7 +154,7 @@ public class SpaceNebula {
     /**
      * Verschwimmungseffekt. Ersetzt jede Zelle durch den Durchschnitt von sich und allen anderen in einem 11x11 Quadrat
      * um die betreffende Zelle. Aus Effizienzgründen wird dies in x- und y-Richtung separat gemacht.
-     * Ferner wird der Durchschnitt nicht bei jedem Pixel neu berechnet, sondern mithilfe eines laufend aktualisierten Totalwerts
+     * Ferner wird der Durchschnitt nicht bei jedem Pixel neu berechnet, sondern mithilfe eines laufend aktualisierten Totalwerts.
      * Deshalb funktioniert diese Implementation nahe am Rand des Bildes nicht richtig.
      */
     private static double[][] blurmask(double[][] mask){
@@ -194,13 +193,21 @@ public class SpaceNebula {
     public void dimAround(int xC, int yC){
         this.checkMin();
         this.checkMax();
+
+        int MD = Math.min(
+                Math.min(xC, Math.abs(pixel.length-xC)),
+                Math.min(xC, Math.abs(pixel[0].length-yC))
+        );
+        double decF = Math.log(0.55) / MD;
+        //System.out.println("MD: " + MD + ", decF: " + decF);
+
         for (int x = 0; x < this.pixel.length; x += 1){
             for (int y = 0; y < this.pixel[0].length; y += 1){
                 for(int z = 0; z < this.pixel[0][0].length; z += 1){
                     double avgdydx = 0.5*(Math.abs(xC-x) + Math.abs(yC-y));
                     double dist = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
                     this.pixel[x][y][z] = Math.pow(
-                            (this.pixel[x][y][z]-this.min[z])*Math.exp(0.0016*(-1*(avgdydx+dist)-4*this.pixel[x][y][z]))
+                            (this.pixel[x][y][z]-this.min[z])/(this.max[z]-this.min[z])*Math.exp(decF*(1*(avgdydx+dist)+4*this.pixel[x][y][z]))
                     , 2);
                 }
             }
@@ -285,7 +292,7 @@ public class SpaceNebula {
     /**
      * Homogenisiert den Farbton des Bildes
      * Verwendet waveLengthToRGB(), um aus einer zufälligen Wellenlänge einen RGB-Wert auszurechnen.
-     * Multipliziert anschliessend alle
+     * Multipliziert anschliessend alle Werte mit dem RGB-Wert des korrespondierenden Farbkanals
      */
      public void monochromize(){
         int[] col = SpaceNebula.waveLengthToRGB(380+Math.random()*400);
@@ -313,7 +320,6 @@ public class SpaceNebula {
         }
     }
 
-
     /**
      * Ruft SternStunde(int Anzahl) mit einer zufällig zwischen 50 und 150 Anzahl Sterne auf
      */
@@ -321,14 +327,15 @@ public class SpaceNebula {
         this.SternStunde(50+(int)(Math.random()*100));
     }
 
-    /**Zeichnet Sterne auf das Bild. Funktioniert NUR wenn die Werte schon auf [0,255] skaliert wurden (siehe scale())
-     *
+    /**
+     * Zeichnet Sterne auf das Bild. Funktioniert NUR wenn die Werte schon auf [0,255] skaliert wurden (siehe scale()).
+     * Andernfalls werden die Sterne nicht die gewünschte Helligkeit haben.
      */
     public void SternStunde(int Anzahl) {
         for (int n = 0; n < Anzahl; n += 1) {
             int sx = (int) (Math.random() * this.pixel.length);
             int sy = (int) (Math.random() * this.pixel[0].length);
-            if ((n) % 10 == 0 && pixel[sx][sy][0] + pixel[sx][sy][1] + pixel[sx][sy][2] < 30) {
+            if ((n) % 9 == 0 && pixel[sx][sy][0] + pixel[sx][sy][1] + pixel[sx][sy][2] < 30) {
                 //Grosser Stern
                 try {
                     int BigS = (int) (Math.random() * 30.0 + 10.0); //Grösse des Sterrns
@@ -362,7 +369,7 @@ public class SpaceNebula {
     }
 
     /**
-     * Speichert das Bild als PNG-Datei. Funktioniert NUR wenn alle Werte zwischen 0 und 255 sind - siehe scale()
+     * Speichert das Bild als PNG-Datei. Funktioniert NUR wenn alle Werte zwischen 0 und 255 sind -> siehe scale()
      */
     public void writeToPNG(String fileName){
         BufferedImage pic = new BufferedImage(pixel.length, pixel[0].length, BufferedImage.TYPE_3BYTE_BGR);
@@ -388,7 +395,7 @@ public class SpaceNebula {
     }
 
     public static void main(String[] args){
-        SpaceNebula nebel = new SpaceNebula(1280, 720);
+        SpaceNebula nebel = new SpaceNebula(1920,1080);
         nebel.noiseFill();
         nebel.schwaden();
         nebel.dimAround();
