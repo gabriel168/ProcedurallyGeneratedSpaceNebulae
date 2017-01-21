@@ -9,11 +9,14 @@ public class SpaceNebula {
     private double[] min;
     private double[] max;
 
-    public void checkMin() {
+    /**
+     *Aktualisiert die tiefsten Werte jedes Farbkanals
+     */
+    private void checkMin() {
         for (int f = 0; f < this.pixel[0][0].length; f++) {
             this.min[f] = this.pixel[0][0][f];
         }
-        for (int x = 0; x < this.pixel.length; x += 1) {
+        for(int x = 0; x < this.pixel.length; x += 1){
             for (int y = 0; y < this.pixel[0].length; y += 1) {
                 for (int z = 0; z < this.pixel[0][0].length; z += 1) {
                     this.min[z] = Math.min(this.min[z], this.pixel[x][y][z]);
@@ -21,8 +24,10 @@ public class SpaceNebula {
             }
         }
     }
-
-    public void checkMax() {
+    /**
+     *Aktualisiert die h&ouml;chsten Werte jedes Farbkanals
+     */
+    private void checkMax() {
         for (int f = 0; f < this.pixel[0][0].length; f++) {
             this.max[f] = this.pixel[0][0][f];
         }
@@ -36,59 +41,83 @@ public class SpaceNebula {
         }
     }
 
-
+    /**
+     * Initialisiert ein Bild mit der angegebenen Aufl&ouml;sung.
+     * Dabei werden zu jedem Pixel ein RGB-Wert als double[3] gespeichert
+     */
     public SpaceNebula(int width, int height){
         this.pixel = new double[width][height][3];
         this.min = new double[3];
         this.max = new double[3];
     }
 
+    /**
+     * Initialisiert ein Bild mit der Standardaufl&ouml;sung 1920*1080
+     */
+    public SpaceNebula() {
+        this(1920,1080);
+    }
+
+    /**
+     * F&uuml;llt das Bild mit verzerrtem und &uuml;berlagertem Perlin-L&auml;rm
+     */
     public void noiseFill() {
-        int seed = (int) (100 * Math.random()); // wird später als z-Offset verwendet, damit verschiedene Bilder generiert werden
-        double NoiseF = 50; //
-        double DistNF = 50; // -------''------
-        double DistortionScaleF = 1000;
+        int seed = (int) (100 * Math.random()); // Ermöglicht die Generation von verschiedenen Bildern (Perlin Noise ist nur Pseudozufällig)
+        double NoiseF = 50; // Strekt bzw. Staucht den Lärm
+        double DistNF = 10; // Strekt bzw. Staucht den zur Verzerrung verwendeten Lärm
+        double DistortionScaleF = 500; // Gewichtung der Verzerrung
 
         for (int x = 0; x < this.pixel.length; x += 1) {
             for (int y = 0; y < this.pixel[0].length; y += 1) {
                 for (int z = 0; z < this.pixel[0][0].length; z++) {
-                    double xoff = ImprovedNoise.noise(DistNF * x / this.pixel.length, DistNF * y / this.pixel[0].length, 2 * seed + 5);
-                    double yoff = ImprovedNoise.noise(DistNF * x / this.pixel.length, DistNF * y / this.pixel[0].length, seed + 2 * z);
+                    //Auf Perlinlärm basierte Translationswerte für den als Bild verwendeten Lärm:
+                    double xoff = ImprovedNoise.noise(DistNF * x / this.pixel.length, DistNF * y / this.pixel[0].length, seed);
+                    double yoff = ImprovedNoise.noise(DistNF * x / this.pixel.length, DistNF * y / this.pixel[0].length, seed);
+
+                    //Verzerrte & Skalierte Koordinaten
                     double xK = (NoiseF * x + xoff * DistortionScaleF) / this.pixel[0].length;
                     double yK = (NoiseF * y + yoff * DistortionScaleF) / this.pixel[0].length;
                     double zK = z + seed;
-                    for (int o = 1, lcw = 1; o < 16; o *= 2, lcw++){
-                        this.pixel[x][y][z] += (o) * ImprovedNoise.noise(xK / o, yK / o, zK / o);// + o*ImprovedNoise.noise(xK / o, yK / o, zK / o);
-                        this.pixel[x][y][z] *= 1 + 0.75*Math.cos((yoff + xoff));
+
+                    /*Überlagert mehrere Lärmwerte, damit das Bild weniger "glatt" aussieht.
+                     *Dabei haben die stärker zusammengestauchten Werte eine tiefere Intensität.
+                     */
+                    for (int o = 1; o < 16; o *= 2){
+                        this.pixel[x][y][z] += (o) * ImprovedNoise.noise(xK / o, yK / o, zK / o);
                     }
+
+                    this.pixel[x][y][z] *= 1 + Math.cos(Math.abs(xoff)+Math.abs(yoff));
                 }
             }
         }
     }
 
-    //überlagert das Bild mit einem fleckenartigen, schwarzen Muster
+    /**
+     * &Uuml;berlagert das Bild mit einem schwadenartigen, schwarzem Muster basierend auf einem der Farbkanäle.
+     *
+     */
     public void schwaden() {
         double[][] mask = new double[this.pixel.length][this.pixel[0].length];
         checkMin();
         checkMax();
         for (int x = 0; x < mask.length; x += 1){
             for (int y = 0; y < mask[0].length; y += 1) {
+                //Rundet die Werte von Farbkanal 0 auf 0 oder 1
                 mask[x][y] = Math.round((this.pixel[x][y][0] - min[0]) / (max[0] - min[0])+0.1);
             }
         }
 
-        for (int i = 0; i < 15; i += 1) {
+        for (int i = 0; i < 10; i += 1) {
             mask = updatemask(mask);
         }
 
-        for (int i = 0; i < 3; i += 1) {
+        for (int i = 0; i < 5; i += 1) {
             mask = blurmask(mask);
         }
 
         this.checkMin();
         for (int x = 0; x < mask.length; x += 1) {
             for (int y = 0; y < mask[0].length; y += 1) {
-                //if(!(0 <= mask[x][y] && mask[x][y] <= 1)){ System.out.println(mask[x][y]);}
                 for (int z = 0; z < this.pixel[0][0].length; z += 1) {
                     this.pixel[x][y][z] = (mask[x][y]) * (this.pixel[x][y][z]-this.min[z]);
                 }
@@ -96,17 +125,21 @@ public class SpaceNebula {
         }
     }
 
-
+    /**Pixel die zusammen mit der Summe aller Nachbarn einen Wert > 4 haben werden zu 1,
+     * pixel am Rand werden zu 0.
+     * Wird in schwaden() verwendet
+     */
     private static double[][] updatemask(double[][] mask){
         double[][] newmask = new double[mask.length][mask[0].length];
         for (int x = 0; x < mask.length; x += 1) {
             for (int y = 0; y < mask[0].length; y += 1) {
 
                 try {
+                    //Summe der benachbarten Zellen
                     double s = mask[x-1][y-1] + mask[x - 1][y] + mask[x-1][y+1]
                              + mask[x][y - 1] + mask[x][y]     + mask[x][y + 1]
                              + mask[x+1][y-1] + mask[x + 1][y] + mask[x+1][y+1];
-                    if (s > 5) {
+                    if (s > 4) {
                         newmask[x][y] = 1;
                     } else {
                         newmask[x][y] = 0;
@@ -119,10 +152,15 @@ public class SpaceNebula {
         return newmask;
     }
 
-
+    /**
+     * Verschwimmungseffekt. Ersetzt jede Zelle durch den Durchschnitt von sich und allen anderen in einem 11x11 Quadrat
+     * um die betreffende Zelle. Aus Effizienzgründen wird dies in x- und y-Richtung separat gemacht.
+     * Ferner wird der Durchschnitt nicht bei jedem Pixel neu berechnet, sondern mithilfe eines laufend aktualisierten Totalwerts
+     * Deshalb funktioniert diese Implementation nahe am Rand des Bildes nicht richtig.
+     */
     private static double[][] blurmask(double[][] mask){
         double TOTAL;
-        int fl = 8;
+        int fl = 5;
             for(int x = 0; x < mask.length; x += 1){
                 TOTAL = 0;
                 for(int b = 0; b < fl; b += 1){
@@ -149,7 +187,10 @@ public class SpaceNebula {
             return mask;
         }
 
-    //Verdunkelt den Bereich um (xC, yC), sodass der Nebel nicht das "ganze Weltall" ausfüllt
+    /**
+     * Verdunkelt Teile des Bildes, sodass der Nebel nicht das ganze Weltall ausf&uuml;llt.
+     * Der Bereich um (xC,yC) - die Mitte des Nebels - bleibt Hell.
+     */
     public void dimAround(int xC, int yC){
         this.checkMin();
         this.checkMax();
@@ -159,24 +200,27 @@ public class SpaceNebula {
                     double avgdydx = 0.5*(Math.abs(xC-x) + Math.abs(yC-y));
                     double dist = Math.sqrt(Math.pow(x-xC,2)+Math.pow(y-yC, 2));
                     this.pixel[x][y][z] = Math.pow(
-                            (this.pixel[x][y][z]-this.min[z])*Math.exp(0.001*(-1*(avgdydx+dist)+4*this.pixel[x][y][z]))
+                            (this.pixel[x][y][z]-this.min[z])*Math.exp(0.0016*(-1*(avgdydx+dist)-4*this.pixel[x][y][z]))
                     , 2);
                 }
             }
         }
     }
 
-    //Ruft dimAround(xC, yC) mit einem zufälligen Punkt, der aber nicht am rand des Bilds sein kann auf
+    /**
+     *Ruft dimAround(xC,yC) mit einem zuf&auml;lligen Punkt aus dem mittleren Teil des Bildes auf.
+     */
     public void dimAround(){
         int xC = (int) ((this.pixel.length)*(Math.random()*0.5+0.25));
         int yC = (int) ((this.pixel[0].length)*(Math.random()*0.5+0.25));
         this.dimAround(xC, yC);
     }
 
-    //gibt rgb-Werte zu Lichtwellenlängen zurück
-    /** Taken from Earl F. Glynn's web page:
+
+    /**Konvertiert Lichtwellenlengen zu RGB-Werten.
+     * Taken from Earl F. Glynn's web page:
      * <a href="http://www.efg2.com/Lab/ScienceAndEngineering/Spectra.htm">Spectra Lab Report</a>
-     * */
+     */
     public static int[] waveLengthToRGB(double Wavelength){
 
         double Gamma = 0.01;
@@ -238,19 +282,25 @@ public class SpaceNebula {
         return rgb;
     }
 
-    //Homogenenisiert den Farbton
-    public void monochromize(){
+    /**
+     * Homogenisiert den Farbton des Bildes
+     * Verwendet waveLengthToRGB(), um aus einer zufälligen Wellenlänge einen RGB-Wert auszurechnen.
+     * Multipliziert anschliessend alle
+     */
+     public void monochromize(){
         int[] col = SpaceNebula.waveLengthToRGB(380+Math.random()*400);
         for(int x = 0; x < this.pixel.length; x += 1){
             for(int y = 0; y < this.pixel[0].length; y += 1){
                 for(int z = 0; z < 3; z += 1){
-                    this.pixel[x][y][z] = (int) (col[z]*pixel[x][y][z]);
+                    this.pixel[x][y][z] = (col[z]*pixel[x][y][z]);
                 }
             }
         }
     }
 
-    //Skaliert die Werte in den Bereich [0,255]
+    /**
+     * Skaliert alle Werte in den Bereich [0,255]
+     */
     public void scale(){
         this.checkMin();
         this.checkMax();
@@ -264,12 +314,16 @@ public class SpaceNebula {
     }
 
 
-    //Wählt die Anzahl Sterne zufällig aus
+    /**
+     * Ruft SternStunde(int Anzahl) mit einer zufällig zwischen 50 und 150 Anzahl Sterne auf
+     */
     public void SternStunde(){
         this.SternStunde(50+(int)(Math.random()*100));
     }
 
-    //Zeichnet Sterne an zufälligen Punkten auf das Bild
+    /**Zeichnet Sterne auf das Bild. Funktioniert NUR wenn die Werte schon auf [0,255] skaliert wurden (siehe scale())
+     *
+     */
     public void SternStunde(int Anzahl) {
         for (int n = 0; n < Anzahl; n += 1) {
             int sx = (int) (Math.random() * this.pixel.length);
@@ -307,8 +361,10 @@ public class SpaceNebula {
         }
     }
 
-    //Speichert das Bild als png-Datei
-    public void writeToFile(String fileName){
+    /**
+     * Speichert das Bild als PNG-Datei. Funktioniert NUR wenn alle Werte zwischen 0 und 255 sind - siehe scale()
+     */
+    public void writeToPNG(String fileName){
         BufferedImage pic = new BufferedImage(pixel.length, pixel[0].length, BufferedImage.TYPE_3BYTE_BGR);
         for(int x = 0; x < pixel.length; x += 1){
             for(int y = 0; y < pixel[0].length; y += 1){
@@ -332,14 +388,14 @@ public class SpaceNebula {
     }
 
     public static void main(String[] args){
-        SpaceNebula nebel = new SpaceNebula(1920, 1080);
+        SpaceNebula nebel = new SpaceNebula(1280, 720);
         nebel.noiseFill();
         nebel.schwaden();
         nebel.dimAround();
         nebel.monochromize();
         nebel.scale();
-        nebel.SternStunde(100);
-        nebel.writeToFile("neb.png");
+        nebel.SternStunde();
+        nebel.writeToPNG("SpaceNebula.png");
         System.out.println("Done");
     }
 }
