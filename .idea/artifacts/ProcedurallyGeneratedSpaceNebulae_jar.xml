@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="ProcedurallyGeneratedSpaceNebulae:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/ProcedurallyGeneratedSpaceNebulae_jar</output-path>
+    <root id="archive" name="ProcedurallyGeneratedSpaceNebulae.jar">
+      <element id="module-output" name="ProcedurallyGeneratedSpaceNebulae" />
+    </root>
+  </artifact>
+</component>

@@ -369,7 +369,14 @@ public class SpaceNebula {
     }
 
     /**
-     * Speichert das Bild als PNG-Datei. Funktioniert NUR wenn alle Werte zwischen 0 und 255 sind -> siehe scale()
+     * Speichert das Bild als PNG-Datei. Funktioniert NUR wenn alle Werte zwischen 0 und 255 sind - siehe scale()
+     */
+    public void writeToPNG() {
+        writeToPNG("SpaceNebula.png");
+    }
+
+    /**
+     * Speichert das Bild als PNG-Datei. Funktioniert NUR wenn alle Werte zwischen 0 und 255 sind - siehe scale()
      */
     public void writeToPNG(String fileName){
         BufferedImage pic = new BufferedImage(pixel.length, pixel[0].length, BufferedImage.TYPE_3BYTE_BGR);
@@ -402,7 +409,7 @@ public class SpaceNebula {
         nebel.monochromize();
         nebel.scale();
         nebel.SternStunde();
-        nebel.writeToPNG("SpaceNebula.png");
+        nebel.writeToPNG();
         System.out.println("Done");
     }
 }
