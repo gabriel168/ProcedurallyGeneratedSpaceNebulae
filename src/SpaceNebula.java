@@ -1,5 +1,5 @@
 import javax.imageio.ImageIO;
-import java.awt.*;
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -349,7 +349,7 @@ public class SpaceNebula {
                         }
                     }
                 } catch (ArrayIndexOutOfBoundsException e) {
-                    //lol who cares?
+                    //Stern ist zu nahe am Rand
                 }
             } else {
                 //Kleiner Stern
@@ -362,7 +362,7 @@ public class SpaceNebula {
                         this.pixel[sx][sy - 1][z] = 200;
                     }
                 } catch (ArrayIndexOutOfBoundsException e) {
-                    //whatever, just give up
+                    //Stern ist zu nahe am Rand
                 }
             }
         }
